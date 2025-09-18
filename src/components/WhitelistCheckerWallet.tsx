@@ -1,6 +1,6 @@
 import React, { useState, CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import romeIcon from "../assets/Romeicon.svg";
+import romeIcon from "../assets/SVG.svg";
 
 type StatusKey = "not" | "overallocated" | "guaranteed" | "standby";
 

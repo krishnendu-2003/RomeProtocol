@@ -1,25 +1,48 @@
-import React, { useState, CSSProperties } from "react";
-import romeIcon from "../assets/Romeicon.svg";
+import React, { useState, CSSProperties, useEffect } from "react";
+import romeIcon from "../assets/SVG.svg";
 import { useNavigate } from "react-router-dom";
+
+type Me = { username: string; id: string } | null;
 
 
 export default function WhitelistCheckerFollow() {
+     const [me, setMe] = useState<Me>(null);
   const [handle, setHandle] = useState("");
-  const isHandleValid =
-    handle.trim().length >= 2 &&
-    /^@?\w{2,15}$/i.test(handle.replace(/^@/, ""));
-
+  
     const navigate = useNavigate();
+
+    useEffect(() => {
+    fetch("/api/me").then(r => r.json()).then(d => setMe(d.me));
+  }, []);
+    useEffect(() => {
+    if (me?.username && !handle) setHandle(me.username);
+  }, [me]);
 
   const followUrl = "https://x.com/RomeProtocol";
 
-  const onVerify = () => {
-  if (isHandleValid) {
+  const isHandleValid =
+    handle.trim().length >= 2 && /^@?\w{2,15}$/i.test(handle.replace(/^@/, ""));
+    
+      const onLogin = () => { window.location.href = "/auth/login"; };
+
+
+  const onVerify = async () => {
+    if (!isHandleValid) return;
     const normalized = "@" + handle.replace(/^@/, "");
-    sessionStorage.setItem("romeHandle", normalized); // remember X handle
-    navigate("/wallet");
-  }
-};
+    const resp = await fetch(`/api/verify-follow?inputHandle=${encodeURIComponent(normalized)}`);
+    const data = await resp.json();
+
+    if (data.ok) {
+      sessionStorage.setItem("romeHandle", normalized);
+      navigate("/wallet");
+    } else {
+      alert(
+        data.reason === "handle_mismatch"
+          ? data.message
+          : "Not verified. Please follow @RomeProtocol with the same signed-in account and try again."
+      );
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -88,35 +111,29 @@ export default function WhitelistCheckerFollow() {
 
           {/* Buttons */}
           <div style={styles.buttonRow}>
-            <a
-              href={followUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              style={styles.followBtn}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                style={{ width: 16, height: 16, marginRight: 8 }}
-              >
-                <path d="M18.244 2H21l-7.36 8.395L22.5 22H15.9l-5.03-6.025L4.96 22H2l7.828-8.928L1.5 2h6.76l4.65 5.56L18.244 2Zm-2.652 18.11h1.722L7.512 3.81H5.708l9.884 16.3Z" />
-              </svg>
-              Follow @RomeProtocol
-            </a>
+    {!me ? (
+      <button type="button" onClick={onLogin} style={styles.followBtn}>
+        Sign in with X to Verify
+      </button>
+    ) : (
+      <div style={{ textAlign: "left", fontSize: 13, color: "#6B7280" }}>
+        Signed in as <strong>@{me.username}</strong>
+      </div>
+    )}
 
-            <button
-              type="button"
-              onClick={onVerify}
-              disabled={!isHandleValid}
-              style={{
-                ...styles.verifyBtn,
-                ...(isHandleValid ? {} : styles.verifyBtnDisabled),
-              }}
-            >
-              Verify Follow Status
-            </button>
-          </div>
+    <a href={followUrl} target="_blank" rel="noreferrer noopener" style={styles.followBtn}>
+      {/* svg icon ... */} Follow @RomeProtocol
+    </a>
+
+    <button
+      type="button"
+      onClick={onVerify}
+      disabled={!isHandleValid}
+      style={{ ...styles.verifyBtn, ...(isHandleValid ? {} : styles.verifyBtnDisabled) }}
+    >
+      Verify Follow Status
+    </button>
+  </div>
 
           <p style={styles.note}>
             We’ll never post on your behalf. Your handle is used only to check
